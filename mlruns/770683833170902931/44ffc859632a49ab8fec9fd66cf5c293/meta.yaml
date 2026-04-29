@@ -1,4 +1,4 @@
-artifact_uri: file:///C:/Users/tthem/timeseries-april/mlruns/770683833170902931/44ffc859632a49ab8fec9fd66cf5c293/artifacts
+artifact_uri: file:///C:/Users/Location_of_your_folder/mlruns/770683833170902931/44ffc859632a49ab8fec9fd66cf5c293/artifacts
 end_time: 1777439376157
 entry_point_name: ''
 experiment_id: '770683833170902931'
@@ -11,4 +11,4 @@ source_version: ''
 start_time: 1777439360062
 status: 3
 tags: []
-user_id: tthem
+user_id: XXX
