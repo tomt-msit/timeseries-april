@@ -1,0 +1,8 @@
+artifact_location: file:///C:/Users/tthem/timeseries-april/mlruns/770683833170902931
+creation_time: 1777439097475
+experiment_id: '770683833170902931'
+last_update_time: 1777439097475
+lifecycle_stage: active
+name: retail_sales_forecasting
+trace_location: null
+workspace: default

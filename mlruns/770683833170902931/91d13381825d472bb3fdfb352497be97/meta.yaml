@@ -1,0 +1,14 @@
+artifact_uri: file:///C:/Users/tthem/timeseries-april/mlruns/770683833170902931/91d13381825d472bb3fdfb352497be97/artifacts
+end_time: 1777439790077
+entry_point_name: ''
+experiment_id: '770683833170902931'
+lifecycle_stage: active
+run_id: 91d13381825d472bb3fdfb352497be97
+run_name: XGBoost (tuned)
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1777439789990
+status: 3
+tags: []
+user_id: tthem

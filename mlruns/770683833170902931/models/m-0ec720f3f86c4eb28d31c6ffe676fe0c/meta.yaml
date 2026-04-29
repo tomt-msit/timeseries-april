@@ -1,0 +1,10 @@
+artifact_location: file:///C:/Users/tthem/timeseries-april/mlruns/770683833170902931/models/m-0ec720f3f86c4eb28d31c6ffe676fe0c/artifacts
+creation_timestamp: 1777439360175
+experiment_id: '770683833170902931'
+last_updated_timestamp: 1777439376120
+model_id: m-0ec720f3f86c4eb28d31c6ffe676fe0c
+model_type: null
+name: model
+source_run_id: 44ffc859632a49ab8fec9fd66cf5c293
+status: 2
+status_message: null

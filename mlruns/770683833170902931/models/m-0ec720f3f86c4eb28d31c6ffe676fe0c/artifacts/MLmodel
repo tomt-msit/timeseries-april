@@ -1,0 +1,22 @@
+artifact_path: file:///C:/Users/tthem/timeseries-april/mlruns/770683833170902931/models/m-0ec720f3f86c4eb28d31c6ffe676fe0c/artifacts
+flavors:
+  python_function:
+    data: model.ubj
+    env:
+      conda: conda.yaml
+      virtualenv: python_env.yaml
+    loader_module: mlflow.xgboost
+    python_version: 3.11.7
+  xgboost:
+    code: null
+    data: model.ubj
+    model_class: xgboost.sklearn.XGBRegressor
+    model_format: ubj
+    xgb_version: 3.2.0
+mlflow_version: 3.11.1
+model_id: m-0ec720f3f86c4eb28d31c6ffe676fe0c
+model_size_bytes: 346139
+model_uuid: m-0ec720f3f86c4eb28d31c6ffe676fe0c
+prompts: null
+run_id: 44ffc859632a49ab8fec9fd66cf5c293
+utc_time_created: '2026-04-29 05:09:20.252108'
