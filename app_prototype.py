@@ -2,7 +2,7 @@
 # Built in Day 2. Polished and deployed in Day 3.
 #
 # To launch:
-#   Open Anaconda Prompt
+#   Open Command Prompt
 #   cd C:\Users\tthem\timeseries-april
 #   python -m streamlit run app_prototype.py
 
