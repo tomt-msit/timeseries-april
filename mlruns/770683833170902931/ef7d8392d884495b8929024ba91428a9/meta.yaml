@@ -1,0 +1,14 @@
+artifact_uri: file:///C:/Users/Location_of_your_folder/mlruns/770683833170902931/ef7d8392d884495b8929024ba91428a9/artifacts
+end_time: 1777515209741
+entry_point_name: ''
+experiment_id: '770683833170902931'
+lifecycle_stage: active
+run_id: ef7d8392d884495b8929024ba91428a9
+run_name: XGBoost (tuned)
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1777515209647
+status: 3
+tags: []
+user_id: tthem

@@ -1,0 +1,14 @@
+artifact_uri: file:///C:/Users/tthem/timeseries-april/data/mlruns/471110615720329418/dd90b0c8dc7c48aba0a2d863050e0215/artifacts
+end_time: 1777508715473
+entry_point_name: ''
+experiment_id: '471110615720329418'
+lifecycle_stage: active
+run_id: dd90b0c8dc7c48aba0a2d863050e0215
+run_name: Prophet
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1777508715367
+status: 3
+tags: []
+user_id: tthem

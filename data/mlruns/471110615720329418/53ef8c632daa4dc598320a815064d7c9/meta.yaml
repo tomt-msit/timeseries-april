@@ -1,0 +1,14 @@
+artifact_uri: file:///C:/Users/tthem/timeseries-april/data/mlruns/471110615720329418/53ef8c632daa4dc598320a815064d7c9/artifacts
+end_time: 1777508715336
+entry_point_name: ''
+experiment_id: '471110615720329418'
+lifecycle_stage: active
+run_id: 53ef8c632daa4dc598320a815064d7c9
+run_name: Holt-Winters
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1777508715206
+status: 3
+tags: []
+user_id: tthem

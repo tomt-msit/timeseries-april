@@ -1,0 +1,14 @@
+artifact_uri: file:///C:/Users/tthem/timeseries-april/data/mlruns/471110615720329418/cd0dd10f2f0e43009e6d8c2fd39f56f0/artifacts
+end_time: 1777508715183
+entry_point_name: ''
+experiment_id: '471110615720329418'
+lifecycle_stage: active
+run_id: cd0dd10f2f0e43009e6d8c2fd39f56f0
+run_name: ARIMA
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1777508715074
+status: 3
+tags: []
+user_id: tthem
