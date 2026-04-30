@@ -160,9 +160,6 @@ def make_forecast(df, model, features, cutoff_date, n_days=1):
 
         return pd.DataFrame(forecasts).set_index('date')
 
-print("make_forecast() updated — handles ARIMA, Holt-Winters, Prophet, and XGBoost.")
-print(f"Detected model type: {type(model).__name__}")
-
 # ── App layout ────────────────────────────────────────────────
 st.title("Retail Sales Forecasting")
 st.write("Corporacion Favorita — Guayas region")
