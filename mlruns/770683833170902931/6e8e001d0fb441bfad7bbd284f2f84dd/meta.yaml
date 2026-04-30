@@ -1,0 +1,14 @@
+artifact_uri: file:///C:/Users/Location_of_your_folder/mlruns/770683833170902931/6e8e001d0fb441bfad7bbd284f2f84dd/artifacts
+end_time: 1777524871605
+entry_point_name: ''
+experiment_id: '770683833170902931'
+lifecycle_stage: active
+run_id: 6e8e001d0fb441bfad7bbd284f2f84dd
+run_name: Prophet
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1777524871521
+status: 3
+tags: []
+user_id: tthem

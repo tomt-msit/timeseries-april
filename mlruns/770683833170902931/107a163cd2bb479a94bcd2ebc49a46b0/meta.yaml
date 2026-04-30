@@ -1,0 +1,14 @@
+artifact_uri: file:///C:/Users/Location_of_your_folder/mlruns/770683833170902931/107a163cd2bb479a94bcd2ebc49a46b0/artifacts
+end_time: 1777524871495
+entry_point_name: ''
+experiment_id: '770683833170902931'
+lifecycle_stage: active
+run_id: 107a163cd2bb479a94bcd2ebc49a46b0
+run_name: Holt-Winters
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1777524871396
+status: 3
+tags: []
+user_id: tthem
