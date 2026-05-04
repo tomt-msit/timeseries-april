@@ -1,234 +1,172 @@
-# Retail Sales Forecasting App — Prototype
-# Built in Day 2. Polished and deployed in Day 3.
-#
-# To launch:
-#   Open Command Prompt
-#   cd C:\Users\tthem\timeseries-april
-#   python -m streamlit run app_prototype.py
+# Retail Sales Forecasting App - Upgrade C: Model selection (final version)
+# Run: python -m streamlit run app_prototype.py
+# STOP the app (Ctrl+C) and restart it after running this cell.
 
-import os
-import joblib
-import warnings
-import numpy as np
-import pandas as pd
 import matplotlib.pyplot as plt
-import streamlit as st
-from datetime import date
+warnings.filterwarnings('ignore')
 
-warnings.filterwarnings("ignore")
-
-# ── Paths ─────────────────────────────────────────────────────
-PROJECT_DIR = r"C:\Users\tthem\timeseries-april"
-DATA_DIR    = os.path.join(PROJECT_DIR, "data")
-MODELS_DIR  = os.path.join(PROJECT_DIR, "models")
-
+PROJECT_DIR = r'C:\\Users\\tthem\\timeseries-april'
+DATA_DIR    = os.path.join(PROJECT_DIR, 'data')
+MODELS_DIR  = os.path.join(PROJECT_DIR, 'models')
 FEATURES = [
-    "year", "month", "day", "dayofweek", "quarter", "week_of_year",
-    "is_weekend", "is_month_start", "is_month_end",
-    "lag_1", "lag_7", "lag_14", "lag_30",
-    "rolling_7d_mean", "rolling_14d_mean", "rolling_30d_mean", "rolling_7d_std",
-    "dcoilwtico", "oil_lag_1", "oil_rolling_7d_mean",
-    "is_national_holiday", "is_regional_holiday", "is_local_holiday",
+    'year','month','day','dayofweek','quarter','week_of_year',
+    'is_weekend','is_month_start','is_month_end',
+    'lag_1','lag_7','lag_14','lag_30',
+    'rolling_7d_mean','rolling_14d_mean','rolling_30d_mean','rolling_7d_std',
+    'dcoilwtico','oil_lag_1','oil_rolling_7d_mean',
+    'is_national_holiday','is_regional_holiday','is_local_holiday',
 ]
-TARGET = "unit_sales"
+TARGET     = 'unit_sales'
+SPLIT_DATE = '2014-01-01'
 
-# ── Load data (cached — runs once) ───────────────────────────
 @st.cache_data
 def load_data():
-    df = pd.read_csv(os.path.join(DATA_DIR, "timeseries_with_features.csv"))
-    df["date"] = pd.to_datetime(df["date"])
-    return df.sort_values("date").set_index("date").dropna()
+    df = pd.read_csv(os.path.join(DATA_DIR, 'timeseries_with_features.csv'))
+    df['date'] = pd.to_datetime(df['date'])
+    return df.sort_values('date').set_index('date').dropna()
 
-# ── Load model (cached — runs once) ──────────────────────────
 @st.cache_resource
-def load_model():
-    pkl_path = os.path.join(MODELS_DIR, "best_model.pkl")
-    pt_path  = os.path.join(MODELS_DIR, "best_model.pt")
+def load_xgb_model():
+    pkl = os.path.join(MODELS_DIR, 'best_model.pkl')
+    return joblib.load(pkl) if os.path.exists(pkl) else None
 
-    if os.path.exists(pkl_path):
-        return joblib.load(pkl_path)
-
-    elif os.path.exists(pt_path):
-        import torch
-        import torch.nn as nn
-        class SimpleLSTM(nn.Module):
-            def __init__(self, hidden=64):
-                super().__init__()
-                self.lstm   = nn.LSTM(1, hidden, batch_first=True)
-                self.linear = nn.Linear(hidden, 1)
-            def forward(self, x):
-                out, _ = self.lstm(x)
-                return self.linear(out[:, -1, :])
-        model = SimpleLSTM(hidden=64)
-        model.load_state_dict(torch.load(pt_path))
-        model.eval()
-        return model
-
+def train_model(choice, df_train, df_test):
+    "Train the chosen model. Returns (test_predictions, trained_model)."
+    if choice == 'ARIMA':
+        m   = SARIMAX(df_train[TARGET], order=(1,1,1), seasonal_order=(1,1,1,7))
+        fit = m.fit(disp=False)
+        return fit.forecast(steps=len(df_test)).values, fit
+    elif choice == 'Holt-Winters':
+        m   = ExponentialSmoothing(df_train[TARGET], trend='add',
+                                   seasonal='add', seasonal_periods=7)
+        fit = m.fit()
+        return fit.forecast(len(df_test)).values, fit
+    elif choice == 'Prophet':
+        pt = df_train[[TARGET]].reset_index().rename(columns={'date':'ds',TARGET:'y'})
+        te = df_test[[TARGET]].reset_index().rename(columns={'date':'ds',TARGET:'y'})
+        m  = Prophet(weekly_seasonality=True, yearly_seasonality=True)
+        m.fit(pt)
+        fo = m.predict(m.make_future_dataframe(periods=len(te), freq='D'))
+        return fo['yhat'].values[-len(te):], m
     else:
-        return None
+        m     = load_xgb_model()
+        preds = m.predict(df_test[FEATURES])
+        return preds, m
 
-# ── Load best model name ──────────────────────────────────────
-def load_model_name():
-    name_path = os.path.join(MODELS_DIR, "best_model_name.txt")
-    if os.path.exists(name_path):
-        with open(name_path) as f:
-            return f.read().strip()
-    return "Unknown"
-
-# ── Forecast function ─────────────────────────────────────────
 def make_forecast(df, model, features, cutoff_date, n_days=1):
-    """
-    Generates a forecast for n_days starting after cutoff_date.
-    Automatically handles XGBoost, ARIMA, Holt-Winters, and Prophet.
-
-    Parameters:
-        df          : full feature-engineered DataFrame
-        model       : trained model object
-        features    : list of feature column names (used by XGBoost only)
-        cutoff_date : forecast starts the day after this date
-        n_days      : number of days to forecast
-
-    Returns:
-        DataFrame with columns ['date', 'forecast']
-    """
-    cutoff     = pd.to_datetime(cutoff_date)
-    model_type = type(model).__name__
-
-    # ── ARIMA / SARIMAX ──────────────────────────────────────
-    # Uses forecast() from the last training date — no feature row needed
-    if 'SARIMAXResults' in model_type or 'ARIMAResults' in model_type:
-        preds = model.forecast(steps=n_days)
-        forecasts = [
-            {'date': cutoff + pd.Timedelta(days=i+1),
-             'forecast': round(float(max(0, p)), 2)}
-            for i, p in enumerate(preds)
-        ]
-        return pd.DataFrame(forecasts).set_index('date')
-
-    # ── Holt-Winters ─────────────────────────────────────────
-    # Uses forecast() exactly like ARIMA
-    elif 'HoltWintersResults' in model_type or 'ExponentialSmoothing' in model_type:
-        preds = model.forecast(n_days)
-        forecasts = [
-            {'date': cutoff + pd.Timedelta(days=i+1),
-             'forecast': round(float(max(0, p)), 2)}
-            for i, p in enumerate(preds)
-        ]
-        return pd.DataFrame(forecasts).set_index('date')
-
-    # ── Prophet ──────────────────────────────────────────────
-    # Requires a future DataFrame with a 'ds' column
-    elif 'Prophet' in model_type:
-        future_dates = pd.date_range(
-            start=cutoff + pd.Timedelta(days=1),
-            periods=n_days,
-            freq='D'
-        )
-        future_df    = pd.DataFrame({'ds': future_dates})
-        forecast_out = model.predict(future_df)
-        forecasts = [
-            {'date': row['ds'],
-             'forecast': round(float(max(0, row['yhat'])), 2)}
-            for _, row in forecast_out.iterrows()
-        ]
-        return pd.DataFrame(forecasts).set_index('date')
-
-    # ── XGBoost / sklearn-compatible models ──────────────────
-    # Uses feature rows — one prediction per day
+    cutoff = pd.to_datetime(cutoff_date)
+    mt = type(model).__name__
+    if 'SARIMAXResults' in mt or 'ARIMAResults' in mt:
+        p = model.forecast(steps=n_days)
+        return pd.DataFrame([{'date':cutoff+pd.Timedelta(days=i+1),
+            'forecast':round(float(max(0,v)),2)} for i,v in enumerate(p)]).set_index('date')
+    elif 'HoltWinters' in mt or 'ExponentialSmoothing' in mt:
+        p = model.forecast(n_days)
+        return pd.DataFrame([{'date':cutoff+pd.Timedelta(days=i+1),
+            'forecast':round(float(max(0,v)),2)} for i,v in enumerate(p)]).set_index('date')
+    elif 'Prophet' in mt:
+        fd = pd.date_range(start=cutoff+pd.Timedelta(days=1), periods=n_days, freq='D')
+        fo = model.predict(pd.DataFrame({'ds': fd}))
+        return pd.DataFrame([{'date':r['ds'],'forecast':round(float(max(0,r['yhat'])),2)}
+            for _,r in fo.iterrows()]).set_index('date')
     else:
-        history   = df.loc[df.index <= cutoff].copy()
-        forecasts = []
-
-        if len(history) == 0:
-            raise ValueError(f"No data found on or before {cutoff_date}.")
-
+        h, fc = df.loc[df.index <= cutoff].copy(), []
         for i in range(n_days):
-            next_date = cutoff + pd.Timedelta(days=i+1)
+            nd  = cutoff + pd.Timedelta(days=i+1)
+            row = df.loc[[nd],features] if nd in df.index else h.iloc[[-1]][features].copy()
+            row.index = [nd]
+            fc.append({'date':nd,'forecast':round(float(max(0,model.predict(row)[0])),2)})
+        return pd.DataFrame(fc).set_index('date')
 
-            if next_date in df.index:
-                row = df.loc[[next_date], features]
-            else:
-                row = history.iloc[[-1]][features].copy()
-                row.index = [next_date]
+def calc_metrics(actual, predicted):
+    a, p = np.array(actual), np.array(predicted)
+    mae  = mean_absolute_error(a, p)
+    rmse = np.sqrt(mean_squared_error(a, p))
+    bias = np.mean(p - a)
+    r2   = r2_score(a, p)
+    mask = a != 0
+    mape = np.mean(np.abs((a[mask]-p[mask])/a[mask]))*100
+    return {'MAE':round(mae,2),'RMSE':round(rmse,2),
+            'MAPE':round(mape,1),'Bias':round(bias,2),'R2':round(r2,3)}
 
-            pred = model.predict(row)[0]
-            pred = max(0, pred)
-            forecasts.append({
-                'date':     next_date,
-                'forecast': round(float(pred), 2)
-            })
+st.set_page_config(page_title='Sales Forecast', layout='wide')
+st.title('Retail Sales Forecasting')
+st.write('Corporacion Favorita - Guayas region')
 
-        return pd.DataFrame(forecasts).set_index('date')
+st.sidebar.header('Forecast settings')
+model_choice = st.sidebar.selectbox(
+    'Choose a model',
+    options=['XGBoost', 'ARIMA', 'Holt-Winters', 'Prophet'],
+    help='XGBoost loads the pre-trained model instantly. Others retrain live (10-60 sec).')
+cutoff_date  = st.sidebar.date_input('Cutoff date', value=date(2014,1,15),
+    min_value=date(2013,6,1), max_value=date(2014,3,30),
+    help='Forecast starts the day after this date.')
+n_days       = st.sidebar.slider('Days to forecast', 1, 30, 7)
+history_days = st.sidebar.slider('History days to show', 14, 120, 60)
+run_button   = st.sidebar.button('Run Forecast', type='primary')
 
-# ── App layout ────────────────────────────────────────────────
-st.title("Retail Sales Forecasting")
-st.write("Corporacion Favorita — Guayas region")
-
-model_name = load_model_name()
-st.info(f"Active model: {model_name}")
-
-# Sidebar
-st.sidebar.header("Forecast settings")
-
-cutoff_date = st.sidebar.date_input(
-    "Cutoff date",
-    value=date(2014, 1, 15),
-    min_value=date(2013, 6, 1),
-    max_value=date(2014, 3, 30),
-    help="Forecast starts the day after this date."
-)
-
-n_days = st.sidebar.slider("Days to forecast", 1, 30, 7)
-history_days = st.sidebar.slider("History days to show", 14, 120, 60)
-run_button = st.sidebar.button("Run Forecast")
-
-# Main panel
 if run_button:
-    model = load_model()
+    with st.spinner(f'Training {model_choice} and generating forecast...'):
+        df       = load_data()
+        split    = pd.to_datetime(SPLIT_DATE)
+        cutoff   = pd.to_datetime(cutoff_date)
+        df_train = df.loc[df.index < split]
+        df_test  = df.loc[df.index >= split]
+        test_preds, trained_model = train_model(model_choice, df_train, df_test)
+        history_plot = df.loc[
+            (df.index >= cutoff-pd.Timedelta(days=history_days)) &
+            (df.index <= cutoff)][TARGET]
+        forecast_df = make_forecast(df, trained_model, FEATURES, cutoff, n_days)
 
-    if model is None:
-        st.error("Model not found. Run W3-mlflow.ipynb first.")
-    else:
-        with st.spinner("Loading data..."):
-            df = load_data()
+    st.success(f'{model_choice} ready!')
 
-        with st.spinner("Generating forecast..."):
-            cutoff       = pd.to_datetime(cutoff_date)
-            history_plot = df.loc[
-                (df.index >= cutoff - pd.Timedelta(days=history_days)) &
-                (df.index <= cutoff)
-            ][TARGET]
-            forecast_df = make_forecast(df, model, FEATURES, cutoff, n_days)
+    fig, ax = plt.subplots(figsize=(13,4))
+    ax.plot(history_plot.index, history_plot.values,
+            label='Historical', color='steelblue', linewidth=1.5)
+    ax.plot(forecast_df.index, forecast_df['forecast'].values,
+            label=f'{n_days}-day forecast', color='orange',
+            linestyle='--', linewidth=2, marker='o', markersize=4)
+    ax.axvline(cutoff, color='red', linestyle=':', linewidth=1.5, label='Cutoff')
+    ax.set_title(f'{model_choice} Forecast from {cutoff.date()}')
+    ax.set_ylabel('Unit Sales')
+    ax.legend(); ax.grid(True, alpha=0.3)
+    plt.tight_layout()
+    st.pyplot(fig)
 
-        fig, ax = plt.subplots(figsize=(12, 4))
-        ax.plot(history_plot.index, history_plot.values,
-                label="Historical sales", color="steelblue", linewidth=1.5)
-        ax.plot(forecast_df.index, forecast_df["forecast"].values,
-                label=f"{n_days}-day forecast", color="orange",
-                linestyle="--", linewidth=2, marker="o", markersize=4)
-        ax.axvline(cutoff, color="red", linestyle=":", linewidth=1.5, label="Cutoff date")
-        ax.set_title(f"Sales Forecast from {cutoff.date()}")
-        ax.set_ylabel("Unit Sales")
-        ax.legend()
-        ax.grid(True, alpha=0.3)
-        plt.tight_layout()
-        st.pyplot(fig)
+    st.subheader('Forecast values')
+    st.dataframe(forecast_df.reset_index().rename(
+        columns={'date':'Date','forecast':'Predicted Sales'}))
+    st.download_button('Download forecast as CSV',
+        forecast_df.reset_index().to_csv(index=False),
+        file_name=f'forecast_{model_choice}_{cutoff_date}.csv', mime='text/csv')
 
-        st.subheader("Forecast values")
-        st.dataframe(forecast_df.reset_index().rename(
-            columns={"date": "Date", "forecast": "Predicted Sales"}
-        ))
+    st.divider()
+    st.subheader('Evaluation metrics')
+    st.write(f'How well {model_choice} fitted the test period (Jan-Mar 2014).')
+    m = calc_metrics(df_test[TARGET].values, test_preds)
+    c1,c2,c3,c4,c5 = st.columns(5)
+    c1.metric('MAE',  m['MAE'],  help='Average error. Lower is better.')
+    c2.metric('RMSE', m['RMSE'], help='Penalises large errors. Lower is better.')
+    c3.metric('MAPE', f"{m['MAPE']}%", help='Error as %. Under 20% is strong.')
+    c4.metric('Bias', m['Bias'], help='+ = over-predicting. Target: 0.')
+    c5.metric('R2',   m['R2'],   help='Closer to 1.0 is better.')
 
-        csv = forecast_df.reset_index().to_csv(index=False)
-        st.download_button(
-            label="Download forecast as CSV",
-            data=csv,
-            file_name=f"forecast_{cutoff_date}.csv",
-            mime="text/csv"
-        )
-
-        st.success("Forecast complete!")
+    st.divider()
+    st.subheader('Residuals chart')
+    st.write('Residuals = actual minus predicted. Randomly scattered around zero is good.')
+    residuals = df_test[TARGET].values - test_preds
+    colours   = ['coral' if r < 0 else 'steelblue' for r in residuals]
+    fig2, ax2 = plt.subplots(figsize=(13, 3))
+    ax2.bar(df_test.index, residuals, color=colours, alpha=0.75)
+    ax2.axhline(0, color='black', linewidth=1)
+    ax2.set_title('Residuals - Actual minus Predicted')
+    ax2.set_ylabel('Residual (units)')
+    ax2.grid(True, alpha=0.3)
+    plt.tight_layout()
+    st.pyplot(fig2)
+    st.caption('Blue = model over-predicted. Coral = model under-predicted.')
 
 else:
-    st.info("Adjust the settings in the sidebar and click Run Forecast.")
-    st.write("**Data range:** January 2013 – March 2014")
+    st.info('Choose a model in the sidebar and click Run Forecast.')
+    st.write('**Data range:** January 2013 - March 2014')
+    st.write('XGBoost loads instantly. ARIMA, Holt-Winters, Prophet retrain live (10-60 sec).')
