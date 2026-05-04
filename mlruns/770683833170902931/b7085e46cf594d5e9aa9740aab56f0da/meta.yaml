@@ -1,0 +1,14 @@
+artifact_uri: file:///C:/Users/Location_of_your_folder/mlruns/770683833170902931/b7085e46cf594d5e9aa9740aab56f0da/artifacts
+end_time: 1777553641971
+entry_point_name: ''
+experiment_id: '770683833170902931'
+lifecycle_stage: active
+run_id: b7085e46cf594d5e9aa9740aab56f0da
+run_name: ARIMA
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1777553641782
+status: 3
+tags: []
+user_id: tthem
